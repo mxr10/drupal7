@@ -1,0 +1,30 @@
+<?php
+    function dailymotion_schema() {
+        $bdjson = array();
+        $bdjson['dailymotion_list_videos'] = array(
+            'description' => 'Tabla para almacenar los datos del json de dailymotion',
+            'fields' => array(
+                'id' => array('description' => '','type' => 'serial','unsigned' => TRUE,'not null' => TRUE),
+                'created_time' => array('description' => 'Fecha','type' => 'int','length' => 11,'not null' => TRUE),
+                'channel' => array('description' => 'channel','type' => 'varchar','length' => 30,'not null' => TRUE,'default' => ''),
+                'embed_url' => array('description' => 'embed_url','type' => 'varchar','length' => 60,'not null' => TRUE,'default' => ''),
+                'id_video' => array('description' => 'id','type' => 'varchar','length' => 10,'not null' => TRUE,'default' => ''),
+                'owner' => array('description' => 'owner','type' => 'varchar','length' => 10,'not null' => TRUE,'default' => ''),
+                'thumbnail' => array('description' => 'thumbnail','type' => 'varchar','length' => 60,'not null' => TRUE,'default' => ''),
+                'title' => array('description' => 'title','type' => 'varchar','length' => 100,'not null' => TRUE,'default' => ''),
+                'url' => array('description' => 'url','type' => 'varchar','length' => 60,'not null' => TRUE,'default' => ''),
+            ),
+            'primary key' => array('id'),
+        );
+
+        $bdjson['dailymotion_channels_videos'] = array(
+            'description' => 'Tabla para almacenar los canales dailymotion',
+            'fields' => array(
+                'id' => array('description' => 'id','type' => 'serial','unsigned' => TRUE,'not null' => TRUE),
+                'id_channel' => array('description' => 'channel','type' => 'varchar','length' =>10,'not null' => TRUE,'default' => ''),
+                'name_channel' => array('description' => 'name channel','type' => 'varchar','length' => 30,'not null' => TRUE,'default' => ''),
+            ),
+            'primary key' => array('id'),
+        );
+        return $bdjson;
+    }

@@ -1,0 +1,224 @@
+<?php
+
+	$search_id_exists = "";
+	$rows = array();
+
+	function dailymotion_permission() {
+		return array(
+			'dailymotion' =>  array(
+			'title' => t('Permisos para videos dailymotion'),
+			'description' => t('Permisos de las para videos dailymotion'),
+			),
+		);
+	}
+
+	function dailymotion_enable() {
+		if( db_table_exists('dailymotion_list_videos') == FALSE && db_table_exists('dailymotion_channels_videos') == FALSE) {
+	    	drupal_install_schema('dailymotion');
+		}
+	}
+
+	function dailymotion_theme() {
+	  return array(
+	    'admin_channels_dailymotion' => array(
+	      'render element' => 'form',
+	    ),
+	    'show_videos_dailymotion' => array(
+	      'render element' => 'form',
+	    ),
+	  );
+	}
+
+	function dailymotion_menu() {
+		$items = array();
+		$items['admin/content/dailymotion'] = array(
+			'title' => 'Dailymotion',
+			'description' => 'Administrar videos de dailymotion',
+			'access arguments' => array('dailymotion'),
+			'page arguments' => array("show_videos_dailymotion"),
+			'file' => 'show_videos_dailymotion.inc',
+		);
+
+		$items['admin/content/dailymotion/admin_channels'] = array(
+			'title' => 'Administrar canales',
+			'description' => 'Administrar canales de dailymotion',
+			'access arguments' => array('administer users'),
+			'page arguments' => array("admin_channels_dailymotion"),
+			'file' => 'admin_channels_dailymotion.inc',
+			'type' => MENU_LOCAL_TASK
+		);
+
+		$items['video'] = array(
+			'title' => 'video',
+			'page callback' => 'page_videos',
+			'access callback' => 'user_access',
+			'access arguments' => array('access content'),
+
+		);
+
+		$items['video/%'] = array(
+			'title' => 'video',
+			'page callback' => 'page_videos_query',
+			'access callback' => 'user_access',
+			'access arguments' => array('access content'),
+
+		);
+
+		return $items;
+	}
+
+	function page_videos_query(){
+		drupal_add_js('sites/all/libraries/OwlCarousel2-2.3.4/owl.carousel.min.js');
+		drupal_add_css('sites/all/libraries/OwlCarousel2-2.3.4/owl.carousel.css');
+		drupal_add_css('sites/all/libraries/OwlCarousel2-2.3.4/owl.theme.css');
+		drupal_add_css('sites/all/libraries/OwlCarousel2-2.3.4/owl.transitions.css');
+		drupal_add_js('sites/all/modules/notmusatools/dailymotion/dailymotion.js');
+
+		$idowner=arg(1,drupal_get_path_alias());
+		$salida = array();
+
+		$queryvideos = "SELECT * FROM dailymotion_list_videos where channel = '".$idowner."' ORDER BY created_time DESC";
+		$queryvideos = "SELECT * FROM dailymotion_list_videos where channel = '".$idowner."'";
+		$resultvideos = db_query($queryvideos);
+		foreach ($resultvideos as $key => $value){
+			if ($key==0){
+				$salida[0] = $value->embed_url;
+			}
+			($key==0) ? $classactive = " active" : $classactive = "";
+			$salida[1].= '<div class="item videos">';
+				$salida[1] .= '<div class="thumbnail'.$classactive.'" data-src="'.$value->embed_url.'"><img src="'.$value->thumbnail.'" width="140" height="98" /></div>';
+			$salida[1].= '</div>';
+		}
+		print json_encode($salida);
+	}
+
+
+	function page_videos(){
+		drupal_add_js('sites/all/libraries/OwlCarousel2-2.3.4/owl.carousel.min.js');
+		drupal_add_css('sites/all/libraries/OwlCarousel2-2.3.4/owl.carousel.css');
+		drupal_add_css('sites/all/libraries/OwlCarousel2-2.3.4/owl.theme.css');
+		drupal_add_css('sites/all/libraries/OwlCarousel2-2.3.4/owl.transitions.css');
+		drupal_add_js('sites/all/modules/notmusatools/dailymotion/dailymotion.js');
+
+		$videohtml="";
+		$salida = "";
+		$salidavideos="";
+		$salidachannels="";
+		$iframesrc="";
+
+		//Listado de los canales disponibles
+		$querychannels = "SELECT * FROM dailymotion_channels_videos order by weight asc";
+		$resultchannels = db_query($querychannels);
+
+		$query_id_channel = "SELECT id_channel FROM dailymotion_channels_videos ORDER BY weight asc limit 1";
+		$result_id_channel = db_query($query_id_channel);
+		foreach ($result_id_channel as $key => $value) {
+				$id_channel = $value->id_channel;
+		}
+
+		$queryvideos = "SELECT * FROM dailymotion_list_videos where channel='".$id_channel."' ORDER BY created_time DESC";
+		$resultvideos = db_query($queryvideos);
+		foreach ($resultvideos as $key => $value) {
+			if ($key==0){
+				$iframesrc = $value->embed_url;
+			}
+		}
+		
+		$salida.="<div id='owl-channels' class='owl-carousel owl-theme'>";
+		foreach ($resultchannels as $key => $value){
+			if ($key==0){
+				$salida.= '<div class="item channels active '.strtolower(str_replace(' ', '',$value->name_channel)).'">';
+			}else{
+				$salida.= '<div class="item channels '.strtolower(str_replace(' ', '',$value->name_channel)).'">';
+			}
+				$salida.= '<div class="channel" data-idchannel="'.$value->id_channel.'" >'.$value->name_channel.'</div>';
+			$salida.= '</div>';
+		}
+		$salida.="</div>";
+
+
+		$salida.='<div id="player">';
+			$salida.= '<iframe frameborder="0" width="1014" height="600" src="'.$iframesrc.'" allowfullscreen allow="autoplay"></iframe>';
+		$salida.='</div>';
+
+		$queryvideos = "SELECT * FROM dailymotion_list_videos where channel='".$id_channel."' ORDER BY created_time DESC";
+		$resultvideos = db_query($queryvideos);		
+		$salida.="<div id='owl-videos' class='owl-carousel owl-theme'>";
+		foreach ($resultvideos as $key => $value){
+			($key==0) ? $classactive = " active" : $classactive = "";
+			$salida.= '<div class="item videos">';
+				$salida .= '<div class="thumbnail'.$classactive.'" data-src="'.$value->embed_url.'"><img src="'.$value->thumbnail.'" width="160" height="90" /></div>';
+			$salida.= '</div>';
+		}
+		$salida.="</div>";
+		return $salida;
+	}
+
+	function dailymotion_form_alter(&$form, &$form_state) {
+	  	if($form['#form_id']=="admin_channels_dailymotion"){
+	  		$form['group_canales']['#weight'] = 2;
+	  		$form['example_items']['#weight'] = 1;
+	  		$form['actions']['#weight'] = 0;
+	  	}
+	}
+
+	function cron_for_videos_dailymotion(){
+		$rows=array();
+		$count=0;
+		$arraycanales=array();
+		$query = db_query("SELECT id_channel,id  FROM dailymotion_channels_videos order by id asc");
+		$result = $query->fetchAll();
+		db_query('truncate dailymotion_list_videos');
+		foreach ($result as $key => $value){
+			read_dailymontion_videos($value->id_channel);
+	    	//$arraycanales[$value->id]=$value->id_channel;
+		}
+	}
+
+	function read_dailymontion_videos($id_canal){
+		$json = drupal_http_request("https://api.dailymotion.com/playlist/".$id_canal."/videos?fields=channel,embed_url,id,owner,thumbnail_180_url,title,url,created_time&limit=10&sort=recent", array('context' => stream_context_create(array('ssl' => array('verify_peer' => FALSE, 'verify_peer_name' => FALSE),)),));
+		$data =  json_decode($json->data);
+
+		$num_deleted = db_delete('dailymotion_list_videos')
+		  ->condition('channel', $id_canal)
+		  ->execute();
+
+		foreach ($data->list as $key => $data){
+			$search_id_exists = search_if_exists_idvideo($data->id,$id_canal);
+			if($search_id_exists === false){
+				$sql = db_insert('dailymotion_list_videos')
+					->fields(array(
+						'created_time'=>$data->created_time,
+						'channel'=>$id_canal,
+						'embed_url'=>$data->embed_url,
+						'id_video'=>$data->id,
+						'owner'=>$data->owner,
+						'thumbnail'=>$data->thumbnail_180_url,
+						'title'=>$data->title,
+						'url'=>$data->url,
+					  ))
+					->execute();
+			}
+		}
+	}
+
+	function search_if_exists_idvideo($id_video,$id_canal){
+		/*$sqlVal=db_select('dailymotion_list_videos','video')
+		->fields('video', array('id_video'))
+		->condition('id_video',$id_video)
+		->execute()
+		->fetchField();*/
+
+		$sqlVal=db_select('dailymotion_list_videos','video')
+		->fields('video', array('id_video'))
+		->fields('video', array('channel'))
+		->condition('id_video',$id_video)->condition('channel',$id_canal)
+		->execute()
+		->fetchField();
+		
+		if($sqlVal === false){
+			return false;
+		}else{
+			return true;
+		}
+	}

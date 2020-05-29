@@ -1,0 +1,6 @@
+name = dailymotion
+description = Administracion de videos de daily motion
+core = 7.x
+package = Notmusa Tools
+php = 5.3
+version = 1.0
